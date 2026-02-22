@@ -20,30 +20,53 @@ async function expandComments(page) {
   } catch {}
 }
 
-async function extractComments(page) {
-  try {
-    // รอ comment section
-    await page.waitForSelector('div[role="article"]', { timeout: 5000 }).catch(() => {});
+function isRealComment(text, caption) {
+  if (!text) return false;
 
+  const clean = text.trim();
+
+  if (clean.length < 2) return false;
+  if (clean.length > 400) return false;
+
+  // ❌ กัน caption ทั้งหมด
+  if (caption && caption.includes(clean)) return false;
+
+  // ❌ กัน hashtag block
+  if (clean.startsWith("#")) return false;
+
+  // ❌ กัน bullet เงื่อนไข
+  if (clean.startsWith("•")) return false;
+
+  // ❌ กันคำ UI
+  if (
+    clean.includes("ถูกใจ") ||
+    clean.includes("ตอบกลับ") ||
+    clean.includes("แชร์")
+  ) return false;
+
+  return true;
+}
+
+async function extractComments(page, caption = "") {
+  try {
     await autoScroll(page);
     await expandComments(page);
 
-    const commentNodes = await page
-      .locator('div[dir="auto"]')
+    // 🔥 ดึงเฉพาะ comment container จริง
+    const commentContainers = await page
+      .locator('[aria-label="Comment"]')
       .all();
 
     const comments = [];
 
-    for (const node of commentNodes) {
-      const text = (await node.innerText()).trim();
+    for (const container of commentContainers) {
+      const textNode = container.locator('div[dir="auto"]').first();
 
-      if (
-        text.length > 2 &&
-        text.length < 300 &&
-        !text.includes("ถูกใจ") &&
-        !text.includes("ตอบกลับ") &&
-        !text.includes("แชร์")
-      ) {
+      if (!(await textNode.count())) continue;
+
+      const text = (await textNode.innerText()).trim();
+
+      if (isRealComment(text, caption)) {
         comments.push(text);
       }
     }

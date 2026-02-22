@@ -15,7 +15,7 @@ const saveJson = require("./utils/saveJson");
 
   await autoScroll(page, 5);
 
-  const data = await extractPosts(page, browser, 5);
+  const data = await extractPosts(page, browser, 3);
 
   saveJson(data);
 

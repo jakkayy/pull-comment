@@ -9,6 +9,20 @@ function normalizeUrl(url) {
   return url.split("?")[0];
 }
 
+async function getPageName(feedPage) {
+  try {
+    const nameLocator = feedPage.locator('h1').first();
+
+    if (await nameLocator.count()) {
+      return (await nameLocator.innerText()).trim();
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 async function getPostLinks(feedPage, limit = 3) {
   const links = new Set();
 
@@ -40,18 +54,18 @@ async function getPostLinks(feedPage, limit = 3) {
 async function extractPosts(feedPage, browser, limit = 3) {
   const results = [];
 
-  // 1️⃣ ดึงลิงก์จาก feed
+  // 🔥 ดึงชื่อเพจครั้งเดียว
+  const pageName = await getPageName(feedPage);
+
   const postLinks = await getPostLinks(feedPage, limit);
 
   for (const link of postLinks) {
     console.log("Opening:", link);
 
-    // 🔥 ใช้ page ใหม่
     const postPage = await browser.newPage();
     await postPage.goto(link, { waitUntil: "domcontentloaded" });
     await postPage.waitForTimeout(1500);
 
-    // CAPTION
     let caption = "";
     try {
       const captionLocator = postPage
@@ -63,7 +77,6 @@ async function extractPosts(feedPage, browser, limit = 3) {
       }
     } catch {}
 
-    // IMAGE
     let images = [];
     try {
       const imgLocator = postPage
@@ -76,9 +89,10 @@ async function extractPosts(feedPage, browser, limit = 3) {
       }
     } catch {}
 
-    const comments = await extractComments(postPage);
+    const comments = await extractComments(postPage, caption);
 
     results.push({
+      pageName,   // 🔥 เพิ่มตรงนี้
       link,
       caption,
       images,
