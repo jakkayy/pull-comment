@@ -17,6 +17,8 @@ const saveJson = require("./utils/saveJson");
 
   const data = await extractPosts(page, browser, 3);
 
+  console.log("DATA LENGTH:", data.length);
+  console.log("Saving now...");
   saveJson(data);
 
   console.log("Done. Saved to output/result.json");
